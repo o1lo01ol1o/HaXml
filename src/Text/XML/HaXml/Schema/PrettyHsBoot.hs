@@ -68,6 +68,23 @@ ppJoinConId, ppFieldId :: NameConverter -> XName -> XName -> Doc
 ppJoinConId nx p q = ppHName (conid nx p) <> text "_" <> ppHName (conid nx q)
 ppFieldId   nx t   = ppHName . fieldid nx t
 
+ppModuleImport :: NameConverter -> XName -> Decl -> Doc
+ppModuleImport nx _ (XSDInclude m comm) =
+    ppComment After comm
+    $$ text "import" <+> ppModId nx m
+ppModuleImport nx _ (XSDIncludeSource m comm) =
+    ppComment After comm
+    $$ text "import {-# SOURCE #-}" <+> ppModId nx m
+ppModuleImport nx _ (XSDImport m ma comm) =
+    ppComment After comm
+    $$ text "import qualified" <+> ppModId nx m
+                     <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
+ppModuleImport nx _ (XSDImportSource m ma comm) =
+    ppComment After comm
+    $$ text "import {-# SOURCE #-} qualified" <+> ppModId nx m
+                     <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
+ppModuleImport nx _ d = ppHighLevelDecl nx d
+
 -- | Convert a whole document from HaskellTypeModel to Haskell source text.
 ppModule :: NameConverter -> Module -> Doc
 ppModule nx m =
@@ -75,21 +92,27 @@ ppModule nx m =
     $$ text "{-# OPTIONS_GHC -fno-warn-duplicate-exports #-}"
     $$ text "module" <+> ppModId nx (module_name m)
     $$ nest 2 (text "( module" <+> ppModId nx (module_name m)
-              $$ vcat (map (\(XSDInclude ex com)->
-                               ppComment Before com
-                               $$ text ", module" <+> ppModId nx ex)
-                           (module_re_exports m))
+              $$ vcat (map ppReExport (module_re_exports m))
               $$ text ") where")
     $$ text " "
     $$ text "import Text.XML.HaXml.Schema.Schema (SchemaType(..),SimpleType(..),Extension(..),Restricts(..))"
     $$ text "import Text.XML.HaXml.Schema.Schema as Schema"
+    $$ text "import qualified Text.XML.HaXml.Schema.PrimitiveTypes as Xsd"
     $$ (case module_xsd_ns m of
-         Nothing -> text "import Text.XML.HaXml.Schema.PrimitiveTypes as Xsd"
+         Nothing -> empty
          Just ns -> text "import qualified Text.XML.HaXml.Schema.PrimitiveTypes as"<+>ppConId nx ns)
-    $$ vcat (map (ppHighLevelDecl nx)
+    $$ vcat (map (ppModuleImport nx (module_name m))
                  (module_re_exports m {-++ module_import_only m-}))
     $$ text " "
     $$ ppHighLevelDecls nx (module_decls m)
+  where
+    ppReExport (XSDInclude ex com) =
+        ppComment Before com
+        $$ text ", module" <+> ppModId nx ex
+    ppReExport (XSDIncludeSource ex com) =
+        ppComment Before com
+        $$ text ", module" <+> ppModId nx ex
+    ppReExport _ = empty
 
 -- | Generate a fragmentary parser for an attribute.
 ppAttr :: Attribute -> Int -> Doc
@@ -165,8 +188,13 @@ ppHighLevelDecl nx (ExtendSimpleType t s as comm) =
 
 ppHighLevelDecl nx (UnionSimpleTypes t sts comm) =
     ppComment Before comm
-    $$ text "data" <+> ppUnqConId nx t <+> text "=" <+> ppUnqConId nx t
-    $$ text "-- Placeholder for a Union type, not yet implemented."
+    $$ text "newtype" <+> ppUnqConId nx t <+> text "="
+                      <+> ppUnqConId nx t <+> text "Xsd.XsdString"
+    $$ text "instance Eq" <+> ppUnqConId nx t
+    $$ text "instance Show" <+> ppUnqConId nx t
+    $$ text "instance SchemaType" <+> ppUnqConId nx t
+    $$ text "instance SimpleType" <+> ppUnqConId nx t
+    $$ text "-- Placeholder for a Union type; member restrictions are not yet enforced."
 
 ppHighLevelDecl nx (EnumSimpleType t [] comm) =
     ppComment Before comm
@@ -273,11 +301,18 @@ ppHighLevelDecl nx (ExtendComplexTypeAbstract t s insts
 
 ppHighLevelDecl nx (XSDInclude m comm) =
     ppComment After comm
+    $$ text "import" <+> ppModId nx m
+ppHighLevelDecl nx (XSDIncludeSource m comm) =
+    ppComment After comm
     $$ text "import {-# SOURCE #-}" <+> ppModId nx m
 
 ppHighLevelDecl nx (XSDImport m ma comm) =
     ppComment After comm
-    $$ text "import {-# SOURCE #-}" <+> ppModId nx m
+    $$ text "import qualified" <+> ppModId nx m
+                     <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
+ppHighLevelDecl nx (XSDImportSource m ma comm) =
+    ppComment After comm
+    $$ text "import {-# SOURCE #-} qualified" <+> ppModId nx m
                      <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
 
 ppHighLevelDecl nx (XSDComment comm) =

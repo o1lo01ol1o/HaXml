@@ -358,7 +358,7 @@ convert env s = concatMap item (schema_items s)
                                                      $ complex_name c
                     | otherwise =
                           case elem_nameOrRef ed of
-                            Left n  -> xname $ theName n
+                            Left n  -> xname "string"
                             Right _ -> xname "unknownElement"
 
     attributeDecl :: XSD.AttributeDecl -> [Haskell.Attribute]
@@ -375,8 +375,11 @@ convert env s = concatMap item (schema_items s)
                                (attr_use ad == Required)
                                (comment  (attr_annotation ad))
         Right ref -> case Map.lookup ref (env_attribute env) of
-                       Nothing -> error $ "<attributeDecl> unknown attribute reference "
-                                          ++printableName ref
+                       Nothing -> case Map.lookup (N $ localName ref)
+                                                  (env_attribute env) of
+                                    Nothing -> error $ "<attributeDecl> unknown attribute reference "
+                                                       ++printableName ref
+                                    Just a' -> attributeDecl a'
                        Just a' -> attributeDecl a'
 
     attrgroup :: XSD.AttrGroup -> [Haskell.Attribute]
@@ -384,8 +387,11 @@ convert env s = concatMap item (schema_items s)
         Left  n   -> concatMap (either attributeDecl attrgroup)
                                (attrgroup_stuff g)
         Right ref -> case Map.lookup ref (env_attrgroup env) of
-                       Nothing -> error $ "unknown attribute group reference "
-                                          ++printableName ref
+                       Nothing -> case Map.lookup (N $ localName ref)
+                                                  (env_attrgroup env) of
+                                    Nothing -> error $ "unknown attribute group reference "
+                                                       ++printableName ref
+                                    Just g' -> attrgroup g'
                        Just g' -> attrgroup g'
 
     group :: XSD.Group -> [Haskell.Decl]

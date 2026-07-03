@@ -277,7 +277,8 @@ include = do e <- xsdElement "include"
 import_ :: XsdParser SchemaItem
 import_ = do e <- xsdElement "import"
              commit $ return Import
-                      `apply` attribute (N "namespace")      uri e
+                      `apply` (attribute (N "namespace") uri e
+                               `onFail` return "")
                       `apply` attribute (N "schemaLocation") uri e
                       `apply` interiorWith (xsdTag "annotation") annotation e
 
@@ -487,9 +488,14 @@ attributeGroup q =
            `apply` (fmap Left (attribute (N "name") string e)
                     `onFail`
                     fmap Right (attribute (N "ref") (qname q) e))
-           `apply` interiorWith (not.xsdTag "annotation") (many stuff) e
+           `apply` interiorWith (not.xsdTag "annotation")
+                                (fmap concat (many stuff)) e
   where
-    stuff = fmap Left (attributeDecl q) `onFail` fmap Right (attributeGroup q)
+    stuff = fmap ((:[]) . Left) (attributeDecl q)
+            `onFail`
+            fmap ((:[]) . Right) (attributeGroup q)
+            `onFail`
+            fmap (const []) anyAttr
 
 -- | Parse an <xsd:element> decl.
 elementDecl :: (String->String->QName) -> XsdParser ElementDecl
@@ -609,7 +615,7 @@ uri = string
 
 -- | Text parser for an arbitrary string consisting of possibly multiple tokens.
 string :: TextParser String
-string = concat <$> many (space `onFail` word)
+string = many next
 
 space :: TextParser String
 space = many1 $ satisfy isSpace

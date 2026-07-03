@@ -57,12 +57,17 @@ simpleNameConverter = NameConverter
     hierarchy (N n)     = wordsBy (==':') n
     hierarchy (QN ns n) = [nsPrefix ns, n]
 
-    local               = (:[]) . Prelude.last . hierarchy
+    local qn            = case hierarchy qn of
+                            [] -> []
+                            xs -> [Prelude.last xs]
 
     mkConid  []         = "Empty"
+    mkConid  [""]       = "Empty"
     mkConid  [c]        | map toLower c == "string"     = "Xsd.XsdString"
                         | otherwise = first toUpper $ map escape c
-    mkConid [m,c]       | map toLower c == "string"     = "Xsd.XsdString"
+    mkConid [m,c]       | null m                         = mkConid [c]
+                        | null c                         = mkConid [m]
+                        | map toLower c == "string"     = "Xsd.XsdString"
                         | map toLower c == "date"       = "Xsd.Date"
                         | map toLower c == "double"     = "Xsd.Double"
                         | map toLower c == "integer"    = "Xsd.Integer"
@@ -70,12 +75,18 @@ simpleNameConverter = NameConverter
                         | map toLower c == "decimal"    = "Xsd.Decimal"
                         | otherwise = first toUpper (map escape m)++"."++first toUpper (map escape c)
     mkConid more        = mkConid [concat more]
+    mkVarid  []         = "empty"
+    mkVarid  [""]       = "empty"
     mkVarid  [v]        = first toLower (map escape v)
-    mkVarid [m,v]       = first toUpper m++"."++first toLower (map escape v)
+    mkVarid [m,v]       | null m                         = mkVarid [v]
+                        | null v                         = mkVarid [m]
+                        | otherwise = first toUpper m++"."++first toLower (map escape v)
 
     first f (x:xs)
       | not (isAlpha x) = f 'v': x: xs
       | otherwise       = f x: xs
+    first f []           = [f 'v']
+    last  f []           = []
     last  f [x]         = [ f x ]
     last  f (x:xs)      = x: last f xs
 
@@ -174,7 +185,9 @@ fpmlNameConverter = simpleNameConverter
     hierarchy (N n)     = wordsBy (==':') n
     hierarchy (QN ns n) = [nsPrefix ns, n]
 
-    local               = Prelude.last . hierarchy
+    local qn            = case hierarchy qn of
+                            [] -> ""
+                            xs -> Prelude.last xs
 
     mkVarId   "id"      = "ID"
     mkVarId   (v:vs)    = toLower v: map escape vs
