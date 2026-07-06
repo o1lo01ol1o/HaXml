@@ -1,0 +1,131 @@
+# SEC Standard Taxonomies pages.  These pages define the supported filing
+# taxonomies and link to current and historical taxonomy files/packages.
+https://www.sec.gov/data-research/structured-data/taxonomies-schemas/standard-taxonomies
+https://www.sec.gov/data-research/structured-data/taxonomies-schemas/standard-taxonomies/operating-companies
+https://www.sec.gov/data-research/structured-data/taxonomies-schemas/standard-taxonomies/investment-companies
+https://www.sec.gov/data-research/standard-taxonomies/self-regulatory-organizations
+https://www.sec.gov/data-research/standard-taxonomies/security-based-swap-data-repositories-and-execution-facilities
+https://www.sec.gov/data-research/standard-taxonomies/nationally-recognized-statistical-rating-organizations
+
+# Current SEC-supported US GAAP and SRT packages are linked from the SEC
+# operating-companies page.  Keep them explicit so a run still covers GAAP if
+# the SEC page markup changes.
+https://xbrl.fasb.org/us-gaap/2026/us-gaap-2026.zip
+https://xbrl.fasb.org/srt/2026/srt-2026.zip
+https://xbrl.fasb.org/us-gaap/2025/us-gaap-2025.zip
+https://xbrl.fasb.org/srt/2025/srt-2025.zip
+https://xbrl.fasb.org/us-gaap/2024/us-gaap-2024.zip
+https://xbrl.fasb.org/srt/2024/srt-2024.zip
+
+# SEC operating-company filing taxonomies.
+https://xbrl.sec.gov/cyd/2026/
+https://xbrl.sec.gov/cyd/2025/
+https://xbrl.sec.gov/cyd/2024/
+https://xbrl.sec.gov/ecd/2026/
+https://xbrl.sec.gov/ecd/2025/
+https://xbrl.sec.gov/ecd/2024/
+https://xbrl.sec.gov/ffd/2026/
+https://xbrl.sec.gov/ffd/2025q4/
+https://xbrl.sec.gov/ffd/2025/
+https://xbrl.sec.gov/ffd/2024q2/
+https://xbrl.sec.gov/ffd/2024/
+https://xbrl.sec.gov/rxp/2026/
+https://xbrl.sec.gov/rxp/2025/
+https://xbrl.sec.gov/rxp/2024q3/
+https://xbrl.sec.gov/rxp/2024/
+https://xbrl.sec.gov/spac/2026/
+https://xbrl.sec.gov/spac/2025q3/
+https://xbrl.sec.gov/spac/2025/
+
+# SEC investment-company filing taxonomies.
+https://xbrl.sec.gov/cef/2026/
+https://xbrl.sec.gov/cef/2025/
+https://xbrl.sec.gov/cef/2024/
+https://xbrl.sec.gov/fnd/2026/
+https://xbrl.sec.gov/fnd/2025/
+https://xbrl.sec.gov/fnd/2024/
+https://xbrl.sec.gov/oef/2026/
+https://xbrl.sec.gov/oef/2025/
+https://xbrl.sec.gov/oef/2024q3/
+https://xbrl.sec.gov/oef/2024/
+https://xbrl.sec.gov/vip/2026/
+https://xbrl.sec.gov/vip/2025/
+https://xbrl.sec.gov/vip/2024q4/
+https://xbrl.sec.gov/vip/2024/
+
+# Other SEC program taxonomies.
+https://xbrl.sec.gov/sro/2026/
+https://xbrl.sec.gov/sro/2025/
+https://xbrl.sec.gov/sro/2024/
+https://xbrl.sec.gov/sbs/2026/
+https://xbrl.sec.gov/sbs/2025/
+https://xbrl.sec.gov/sbs/2024/
+https://xbrl.sec.gov/rocr/2015/
+https://xbrl.sec.gov/rocr/2015/ratings-2015-03-31.zip
+
+# SEC program roots for historical XSD discovery.  The xbrl.sec.gov root
+# returns 403 from some clients, but these program indexes are accessible and
+# link their historical year/quarter directories.
+https://xbrl.sec.gov/cef/
+https://xbrl.sec.gov/country/
+https://xbrl.sec.gov/currency/
+https://xbrl.sec.gov/cyd/
+https://xbrl.sec.gov/dei/
+https://xbrl.sec.gov/ecd/
+https://xbrl.sec.gov/exch/
+https://xbrl.sec.gov/ffd/
+https://xbrl.sec.gov/fnd/
+https://xbrl.sec.gov/naics/
+https://xbrl.sec.gov/oef/
+https://xbrl.sec.gov/rocr/
+https://xbrl.sec.gov/rxp/
+https://xbrl.sec.gov/sbs/
+https://xbrl.sec.gov/sic/
+https://xbrl.sec.gov/snj/
+https://xbrl.sec.gov/spac/
+https://xbrl.sec.gov/sro/
+https://xbrl.sec.gov/stpr/
+https://xbrl.sec.gov/vip/
+
+# SEC common taxonomy files allowed by the standard taxonomy pages.
+https://xbrl.sec.gov/2026.zip
+https://xbrl.sec.gov/2025.zip
+https://xbrl.sec.gov/2024.zip
+https://xbrl.sec.gov/2023.zip
+https://xbrl.sec.gov/2022.zip
+https://xbrl.sec.gov/dei/2026/
+https://xbrl.sec.gov/dei/2025/
+https://xbrl.sec.gov/dei/2024/
+https://xbrl.sec.gov/country/2026/
+https://xbrl.sec.gov/country/2025/
+https://xbrl.sec.gov/country/2024/
+https://xbrl.sec.gov/currency/2026/
+https://xbrl.sec.gov/currency/2025/
+https://xbrl.sec.gov/currency/2024/
+https://xbrl.sec.gov/exch/2026/
+https://xbrl.sec.gov/exch/2025/
+https://xbrl.sec.gov/exch/2024/
+https://xbrl.sec.gov/naics/2026/
+https://xbrl.sec.gov/naics/2025/
+https://xbrl.sec.gov/naics/2024/
+https://xbrl.sec.gov/sic/2026/
+https://xbrl.sec.gov/sic/2025/
+https://xbrl.sec.gov/sic/2024/
+https://xbrl.sec.gov/stpr/2026/
+https://xbrl.sec.gov/stpr/2025/
+https://xbrl.sec.gov/stpr/2024/
+
+# XBRL and W3C schemas imported by SEC/FASB taxonomies.
+http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd
+http://www.xbrl.org/2003/xbrl-linkbase-2003-12-31.xsd
+http://www.xbrl.org/2003/xl-2003-12-31.xsd
+http://www.xbrl.org/2003/xlink-2003-12-31.xsd
+http://www.xbrl.org/2005/xbrldt-2005.xsd
+http://www.xbrl.org/2006/ref-2006-02-27.xsd
+http://www.xbrl.org/2006/xbrldi-2006.xsd
+https://www.xbrl.org/lrr/role/negated-2009-12-16.xsd
+https://www.xbrl.org/lrr/role/net-2009-12-16.xsd
+https://www.xbrl.org/lrr/arcrole/esma-arcrole-2018-11-21.xsd
+https://www.xbrl.org/lrr/arcrole/factExplanatory-2009-12-16.xsd
+http://www.w3.org/1999/xlink.xsd
+http://www.w3.org/2001/xml.xsd

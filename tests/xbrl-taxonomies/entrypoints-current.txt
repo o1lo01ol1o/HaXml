@@ -1,0 +1,66 @@
+# Current SEC/FASB taxonomy entrypoints from the SEC Standard Taxonomies pages.
+# Paths are relative to tests/xbrl-taxonomies/cache.
+
+# FASB US GAAP / SRT, current SEC-supported release.
+https/xbrl.fasb.org/us-gaap/2026/elts/us-gaap-2026.xsd
+https/xbrl.fasb.org/us-gaap/2026/ebp/elts/us-gaap-ebp-2026.xsd
+https/xbrl.fasb.org/srt/2026/elts/srt-2026.xsd
+
+# SEC common files used by supported filing taxonomies.
+https/xbrl.sec.gov/dei/2026/dei-2026.xsd
+https/xbrl.sec.gov/dei/2026/dei-sub-2026.xsd
+https/xbrl.sec.gov/country/2026/country-2026.xsd
+https/xbrl.sec.gov/currency/2026/currency-2026.xsd
+https/xbrl.sec.gov/exch/2026/exch-2026.xsd
+https/xbrl.sec.gov/naics/2026/naics-2026.xsd
+https/xbrl.sec.gov/sic/2026/sic-2026.xsd
+https/xbrl.sec.gov/stpr/2026/stpr-2026.xsd
+
+# Operating companies.
+https/xbrl.sec.gov/cyd/2026/cyd-2026.xsd
+https/xbrl.sec.gov/cyd/2026/cyd-6k-sub-2026.xsd
+https/xbrl.sec.gov/cyd/2026/cyd-8k-sub-2026.xsd
+https/xbrl.sec.gov/cyd/2026/cyd-af-2026.xsd
+https/xbrl.sec.gov/cyd/2026/cyd-af-sub-2026.xsd
+https/xbrl.sec.gov/cyd/2026/cyd-cr-2026.xsd
+https/xbrl.sec.gov/ecd/2026/ecd-2026.xsd
+https/xbrl.sec.gov/ecd/2026/ecd-sub-2026.xsd
+https/xbrl.sec.gov/ffd/2026/ffd-2026.xsd
+https/xbrl.sec.gov/rxp/2026/rxp-2026.xsd
+https/xbrl.sec.gov/spac/2026/spac-2026.xsd
+https/xbrl.sec.gov/spac/2026/spac-reg-2026.xsd
+https/xbrl.sec.gov/spac/2026/spac-despac-2026.xsd
+https/xbrl.sec.gov/spac/2026/spac-proj-2026.xsd
+https/xbrl.sec.gov/spac/2026/spac-com-2026.xsd
+
+# Investment companies.
+https/xbrl.sec.gov/cef/2026/cef-2026.xsd
+https/xbrl.sec.gov/fnd/2026/fnd-2026.xsd
+https/xbrl.sec.gov/fnd/2026/fnd-cef-2026.xsd
+https/xbrl.sec.gov/fnd/2026/fnd-oef-2026.xsd
+https/xbrl.sec.gov/fnd/2026/fnd-uit-2026.xsd
+https/xbrl.sec.gov/oef/2026/oef-2026.xsd
+https/xbrl.sec.gov/oef/2026/oef-rr-2026.xsd
+https/xbrl.sec.gov/oef/2026/oef-sr-2026.xsd
+https/xbrl.sec.gov/vip/2026/vip-2026.xsd
+https/xbrl.sec.gov/vip/2026/vip-n3-2026.xsd
+https/xbrl.sec.gov/vip/2026/vip-n4-2026.xsd
+https/xbrl.sec.gov/vip/2026/vip-n6-2026.xsd
+
+# SRO and security-based swap filings.
+https/xbrl.sec.gov/sro/2026/sro-2026.xsd
+https/xbrl.sec.gov/sro/2026/sro-17ad27-2026.xsd
+https/xbrl.sec.gov/sbs/2026/sbs-2026.xsd
+https/xbrl.sec.gov/sbs/2026/sbs-sbsef-2026.xsd
+https/xbrl.sec.gov/sbs/2026/sbs-sbsef-cco-2026.xsd
+https/xbrl.sec.gov/sbs/2026/sbs-sbsef-com-2026.xsd
+https/xbrl.sec.gov/sbs/2026/sbs-sbsef-fex-2026.xsd
+https/xbrl.sec.gov/sbs/2026/sbs-sbsef-fin-2026.xsd
+https/xbrl.sec.gov/sbs/2026/sbs-sbsef-ocx-2026.xsd
+
+# NRSRO record-of-credit-ratings taxonomy listed by SEC.
+https/xbrl.sec.gov/rocr/2015/ratings-2015-03-31.xsd
+https/xbrl.sec.gov/rocr/2015/ratings-std-2015-03-31.xsd
+https/xbrl.sec.gov/rocr/2015/ratings-all-2015-03-31.xsd
+https/xbrl.sec.gov/rocr/2015/ratings-ent-std-2015-03-31.xsd
+https/xbrl.sec.gov/rocr/2015/ratings-ent-all-2015-03-31.xsd
