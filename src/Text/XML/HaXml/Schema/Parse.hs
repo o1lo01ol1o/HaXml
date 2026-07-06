@@ -279,7 +279,8 @@ import_ = do e <- xsdElement "import"
              commit $ return Import
                       `apply` (attribute (N "namespace") uri e
                                `onFail` return "")
-                      `apply` attribute (N "schemaLocation") uri e
+                      `apply` (attribute (N "schemaLocation") uri e
+                               `onFail` return "")
                       `apply` interiorWith (xsdTag "annotation") annotation e
 
 -- | Parse a <xsd:redefine>.

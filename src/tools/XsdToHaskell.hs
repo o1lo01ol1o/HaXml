@@ -12,6 +12,7 @@ import System.Exit
 import System.IO
 import System.Directory
 import Control.Monad
+import Data.List (isPrefixOf,stripPrefix)
 import Data.Maybe (mapMaybe)
 --import Data.Either
 
@@ -22,7 +23,7 @@ import Text.XML.HaXml.Namespaces (resolveAllNames,qualify
                                  ,nullNamespace)
 import Text.XML.HaXml.Parse      (xmlParse')
 import Text.XML.HaXml.Util       (docContent)
-import Text.XML.HaXml.Posn       (posInNewCxt)
+import Text.XML.HaXml.Posn       (Posn,posInNewCxt)
 
 import Text.XML.HaXml.Schema.Parse
 import Text.XML.HaXml.Schema.Environment
@@ -61,10 +62,7 @@ main =
     else readFile inf )           >>= \thiscontent->
   ( if outf=="-" then return stdout
     else openFile outf WriteMode ) >>= \o->
-  let d@Document{} = resolveAllNames qualify
-                     . either (error . ("not XML:\n"++)) id
-                     . xmlParse' inf
-                     $ thiscontent
+  let d@Document{} = parseXmlDocument inf thiscontent
   in do
     case runParser schema [docContent (posInNewCxt inf Nothing) d] of
         (Left msg,_) -> do hPutStrLn stderr msg
@@ -261,26 +259,81 @@ sourceImportEdge importer imported = moduleKey importer > moduleKey imported
 parseSchemaFile :: FilePath -> IO (Maybe Schema)
 parseSchemaFile inf = do
     thiscontent <- readFile inf
-    let d@Document{} = resolveAllNames qualify
-                       . either (error . ("not XML:\n"++)) id
-                       . xmlParse' inf
-                       $ thiscontent
+    let d@Document{} = parseXmlDocument inf thiscontent
     case runParser schema [docContent (posInNewCxt inf Nothing) d] of
       (Left msg,_) -> do hPutStrLn stderr (inf++": "++msg)
                          return Nothing
       (Right v,_)  -> return (Just v)
 
+parseXmlDocument :: FilePath -> String -> Document Posn
+parseXmlDocument inf =
+    resolveAllNames qualify
+    . either (error . ("not XML:\n"++)) id
+    . xmlParse' inf
+    . stripDoctype
+
+-- XSD schemas occasionally carry a DOCTYPE only to define XML character
+-- entities.  Loading those external entities is not needed for schema
+-- conversion, and cached schema sets often do not include the DTD files.
+stripDoctype :: String -> String
+stripDoctype [] = []
+stripDoctype s@(c:cs)
+    | "<!DOCTYPE" `isPrefixOf` s = stripDoctype (dropDoctype s)
+    | otherwise                  = c : stripDoctype cs
+
+dropDoctype :: String -> String
+dropDoctype = go False '\0' (0 :: Int)
+  where
+    go _ _ _ [] = []
+    go quoted quote depth (c:cs)
+      | quoted =
+          if c == quote then go False quote depth cs
+                        else go True  quote depth cs
+      | c == '"' || c == '\'' = go True c depth cs
+      | c == '['              = go False quote (depth + 1) cs
+      | c == ']' && depth > 0 = go False quote (depth - 1) cs
+      | c == '>' && depth == 0 = cs
+      | otherwise             = go False quote depth cs
+
 resolveSchemaLocation :: FilePath -> FilePath -> FilePath
 resolveSchemaLocation base loc
     | absolute loc = loc
-    | otherwise    = let dir = directory base
-                     in if null dir then loc else dir++"/"++loc
+    | otherwise    =
+        case cachedUriLocation base loc of
+          Just path -> path
+          Nothing
+            | uriLike loc -> loc
+            | otherwise   -> let dir = directory base
+                             in if null dir then loc else dir++"/"++loc
   where
     absolute ('/':_) = True
     absolute _       = False
+    uriLike x = "http://" `isPrefixOf` x || "https://" `isPrefixOf` x
     directory path = case dropWhile (/='/') (reverse path) of
                        []       -> ""
                        (_:rest) -> reverse rest
+
+cachedUriLocation :: FilePath -> FilePath -> Maybe FilePath
+cachedUriLocation base loc = do
+    (scheme,rest) <- uriParts loc
+    root <- cacheRoot base
+    return (root++"/"++scheme++"/"++rest)
+  where
+    uriParts x =
+        case stripPrefix "http://" x of
+          Just rest -> Just ("http",rest)
+          Nothing   -> case stripPrefix "https://" x of
+                         Just rest -> Just ("https",rest)
+                         Nothing   -> Nothing
+
+cacheRoot :: FilePath -> Maybe FilePath
+cacheRoot = go []
+  where
+    marker = "/cache/"
+    go _ [] = Nothing
+    go prefix rest
+      | marker `isPrefixOf` rest = Just (reverse prefix++"/cache")
+      | otherwise = go (head rest:prefix) (tail rest)
 
 -- | Munge filename for hs-boot.
 bootf :: FilePath -> FilePath

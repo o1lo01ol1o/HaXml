@@ -196,6 +196,17 @@ ppHighLevelDecl nx (UnionSimpleTypes t sts comm) =
     $$ text "instance SimpleType" <+> ppUnqConId nx t
     $$ text "-- Placeholder for a Union type; member restrictions are not yet enforced."
 
+ppHighLevelDecl nx (ListSimpleType t item comm) =
+    ppComment Before comm
+    $$ text "newtype" <+> ppUnqConId nx t <+> text "="
+                      <+> ppUnqConId nx t <+> text "Xsd.XsdString"
+    $$ text "instance Eq" <+> ppUnqConId nx t
+    $$ text "instance Show" <+> ppUnqConId nx t
+    $$ text "instance SchemaType" <+> ppUnqConId nx t
+    $$ text "instance SimpleType" <+> ppUnqConId nx t
+    $$ text "-- Placeholder for an XSD list type; item type"
+       <+> ppConId nx item <+> text "is not yet enforced."
+
 ppHighLevelDecl nx (EnumSimpleType t [] comm) =
     ppComment Before comm
     $$ text "data" <+> ppUnqConId nx t

@@ -192,6 +192,8 @@ mkEnvironment fp s init = foldl' item (addNS init (schema_namespaces s))
 -- | Find all direct module dependencies.
 gatherImports :: Schema -> [(FilePath, Maybe String)]
 gatherImports s =
-    [ (f,Nothing)  | (Include f _)    <- schema_items s ] ++
+    [ (f,Nothing)  | (Include f _)    <- schema_items s
+                   , not (null f) ] ++
     [ (f,ns)       | (Import uri f _) <- schema_items s
+                   , not (null f)
                    , let ns = targetPrefix (Just uri) (schema_namespaces s) ]

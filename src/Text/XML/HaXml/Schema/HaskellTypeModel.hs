@@ -41,6 +41,10 @@ data Decl
                  -- becomes data T = Ta S0 | Tb S1 | Tc S2 | ...
                | UnionSimpleTypes    XName [XName] Comment
 
+                 -- becomes newtype T = T XsdString
+                 --       (with item parsing/restrictions left unenforced)
+               | ListSimpleType      XName XName Comment
+
                  -- becomes data T = T_C0 | T_C1 | T_C2 | ...
                | EnumSimpleType      XName [(XName,Comment)] Comment
 
