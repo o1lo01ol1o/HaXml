@@ -99,6 +99,7 @@ convert :: Environment -> Schema -> [Haskell.Decl]
 convert env s = concatMap item (schema_items s)
   where
     item (Include loc ann)    = [XSDInclude (xname loc) (comment ann)]
+    item (Import _   ""  _)   = []
     item (Import uri loc ann) = [XSDImport  (xname loc)
                                             (xname <$>
                                              Map.lookup uri (env_namespace env))
@@ -124,9 +125,10 @@ convert env s = concatMap item (schema_items s)
                                                              (restrict_base r))
                                        (mkRestrict r)
                                        (comment a)]
-    simple (ListOf a n f t)     = error "Not yet implemented: ListOf simpleType"
-                              --  [NamedSimpleType    (xname n) (nameOfSimple s)
-                              --                      (comment a)]
+    simple (ListOf a n f t)     = [ListSimpleType
+                                       (maybe (error "missing Name") xname n)
+                                       (either nameOfSimple XName t)
+                                       (comment a)]
     simple s@(UnionOf a n f u m)
         | (Just enums) <- isEnumeration s
                                 = [EnumSimpleType
@@ -358,7 +360,7 @@ convert env s = concatMap item (schema_items s)
                                                      $ complex_name c
                     | otherwise =
                           case elem_nameOrRef ed of
-                            Left n  -> xname $ theName n
+                            Left n  -> xname "string"
                             Right _ -> xname "unknownElement"
 
     attributeDecl :: XSD.AttributeDecl -> [Haskell.Attribute]
@@ -375,8 +377,14 @@ convert env s = concatMap item (schema_items s)
                                (attr_use ad == Required)
                                (comment  (attr_annotation ad))
         Right ref -> case Map.lookup ref (env_attribute env) of
-                       Nothing -> error $ "<attributeDecl> unknown attribute reference "
-                                          ++printableName ref
+                       Nothing -> case Map.lookup (N $ localName ref)
+                                                  (env_attribute env) of
+                                    Nothing -> singleton $
+                                        Attribute (XName ref)
+                                                  (xname "String")
+                                                  (attr_use ad == Required)
+                                                  (comment (attr_annotation ad))
+                                    Just a' -> attributeDecl a'
                        Just a' -> attributeDecl a'
 
     attrgroup :: XSD.AttrGroup -> [Haskell.Attribute]
@@ -384,8 +392,10 @@ convert env s = concatMap item (schema_items s)
         Left  n   -> concatMap (either attributeDecl attrgroup)
                                (attrgroup_stuff g)
         Right ref -> case Map.lookup ref (env_attrgroup env) of
-                       Nothing -> error $ "unknown attribute group reference "
-                                          ++printableName ref
+                       Nothing -> case Map.lookup (N $ localName ref)
+                                                  (env_attrgroup env) of
+                                    Nothing -> []
+                                    Just g' -> attrgroup g'
                        Just g' -> attrgroup g'
 
     group :: XSD.Group -> [Haskell.Decl]
@@ -401,8 +411,9 @@ convert env s = concatMap item (schema_items s)
                                               es)
                                          (comment (group_annotation g))
         Right (QN _ ref) -> case Map.lookup (N ref) (env_group env) of
-                       Nothing -> error $ "bad group reference "
-                                       ++printableName (N ref)
+                       Nothing -> singleton $
+                                  Haskell.Group (xname ("unknown-group-"++ref)) []
+                                                (comment (group_annotation g))
                        Just g' -> group g'{ group_occurs=group_occurs g }
         Right ref -> case Map.lookup ref (env_group env) of
                   --   Nothing -> error $ "bad group reference "

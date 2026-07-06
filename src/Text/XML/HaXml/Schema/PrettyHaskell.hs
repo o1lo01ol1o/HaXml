@@ -99,6 +99,23 @@ ppJoinConId, ppFieldId :: NameConverter -> XName -> XName -> Doc
 ppJoinConId nx p q = ppHName (conid nx p) <> text "_" <> ppHName (conid nx q)
 ppFieldId   nx t   = ppHName . fieldid nx t
 
+ppModuleImport :: NameConverter -> XName -> Decl -> Doc
+ppModuleImport nx _ (XSDInclude m comm) =
+    ppComment After comm
+    $$ text "import" <+> ppModId nx m
+ppModuleImport nx _ (XSDIncludeSource m comm) =
+    ppComment After comm
+    $$ text "import {-# SOURCE #-}" <+> ppModId nx m
+ppModuleImport nx _ (XSDImport m ma comm) =
+    ppComment After comm
+    $$ text "import qualified" <+> ppModId nx m
+                     <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
+ppModuleImport nx _ (XSDImportSource m ma comm) =
+    ppComment After comm
+    $$ text "import {-# SOURCE #-} qualified" <+> ppModId nx m
+                     <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
+ppModuleImport nx _ d = ppHighLevelDecl nx d
+
 -- | Convert a whole document from HaskellTypeModel to Haskell source text.
 ppModule :: NameConverter -> Module -> Doc
 ppModule nx m =
@@ -106,34 +123,51 @@ ppModule nx m =
     $$ text "{-# OPTIONS_GHC -fno-warn-duplicate-exports #-}"
     $$ text "module" <+> ppModId nx (module_name m)
     $$ nest 2 (text "( module" <+> ppModId nx (module_name m)
-              $$ vcat (map (\(XSDInclude ex com)->
-                               ppComment Before com
-                               $$ text ", module" <+> ppModId nx ex)
-                           (module_re_exports m))
+              $$ vcat (map ppReExport (module_re_exports m))
               $$ text ") where")
     $$ text " "
     $$ text "import Text.XML.HaXml.Schema.Schema (SchemaType(..),SimpleType(..),Extension(..),Restricts(..))"
     $$ text "import Text.XML.HaXml.Schema.Schema as Schema"
     $$ text "import Text.XML.HaXml.OneOfN"
+    $$ text "import qualified Text.XML.HaXml.Schema.PrimitiveTypes as Xsd"
     $$ (case module_xsd_ns m of
-         Nothing -> text "import Text.XML.HaXml.Schema.PrimitiveTypes as Xsd"
+         Nothing -> empty
          Just ns -> text "import qualified Text.XML.HaXml.Schema.PrimitiveTypes as"<+>ppConId nx ns)
-    $$ vcat (map (ppHighLevelDecl nx)
+    $$ vcat (map (ppModuleImport nx (module_name m))
                  (module_re_exports m ++ module_import_only m))
-    $$ text " "
-    $$ text "-- Some hs-boot imports are required, for fwd-declaring types."
-    $$ vcat (map ppFwdDecl $ concatMap imports $ module_decls m)
-    $$ vcat (map ppFwdElem $ concatMap importElems $ module_decls m)
+    $$ fwdImports
     $$ text " "
     $$ ppHighLevelDecls nx (module_decls m)
 
   where
+    fwdImports
+      | hasFwdImports =
+          text " "
+          $$ text "-- Some hs-boot imports are required, for fwd-declaring types."
+          $$ vcat (map ppFwdDecl fwdDecls)
+          $$ vcat (map ppFwdElem fwdElems)
+      | otherwise = empty
+
+    hasFwdImports = any (isJust . snd) fwdDecls
+                 || any (isJust . snd) fwdElems
+
+    fwdDecls = concatMap imports $ module_decls m
+    fwdElems = concatMap importElems $ module_decls m
+
     imports (ElementsAttrsAbstract _ deps _) = deps
     imports (ExtendComplexTypeAbstract _ _ deps _ _ _) = deps
     imports _ = []
 
     importElems (ElementAbstractOfType _ _ deps _) = deps
     importElems _ = []
+
+    ppReExport (XSDInclude ex com) =
+        ppComment Before com
+        $$ text ", module" <+> ppModId nx ex
+    ppReExport (XSDIncludeSource ex com) =
+        ppComment Before com
+        $$ text ", module" <+> ppModId nx ex
+    ppReExport _ = empty
 
     ppFwdDecl (_,   Nothing)  = empty
     ppFwdDecl (name,Just mod) = text "import {-# SOURCE #-}" <+> ppModId nx mod
@@ -324,8 +358,44 @@ ppHighLevelDecl nx (ExtendSimpleType t s as comm) =
 
 ppHighLevelDecl nx (UnionSimpleTypes t sts comm) =
     ppComment Before comm
-    $$ text "data" <+> ppUnqConId nx t <+> text "=" <+> ppUnqConId nx t
-    $$ text "-- Placeholder for a Union type, not yet implemented."
+    $$ text "newtype" <+> ppUnqConId nx t <+> text "="
+                      <+> ppUnqConId nx t <+> text "Xsd.XsdString"
+                      <+> text "deriving (Eq,Show)"
+    $$ text "instance SchemaType" <+> ppUnqConId nx t <+> text "where"
+        $$ nest 4 (text "parseSchemaType s = do"
+                  $$ nest 4 (text "e <- element [s]"
+                           $$ text "commit $ interior e $ parseSimpleType")
+                  )
+        $$ nest 4 (text "schemaTypeToXML s ("<> ppUnqConId nx t <+> text "x) = "
+                  $$ nest 4 (text "toXMLElement s [] [toXMLText (simpleTypeText x)]")
+                  )
+    $$ text "instance SimpleType" <+> ppUnqConId nx t <+> text "where"
+        $$ nest 4 (text "acceptingParser = fmap" <+> ppUnqConId nx t
+                                                 <+> text "acceptingParser"
+                   $$ text "simpleTypeText (" <> ppUnqConId nx t
+                                          <+> text "x) = simpleTypeText x")
+    $$ text "-- Placeholder for a Union type; member restrictions are not yet enforced."
+
+ppHighLevelDecl nx (ListSimpleType t item comm) =
+    ppComment Before comm
+    $$ text "newtype" <+> ppUnqConId nx t <+> text "="
+                      <+> ppUnqConId nx t <+> text "Xsd.XsdString"
+                      <+> text "deriving (Eq,Show)"
+    $$ text "instance SchemaType" <+> ppUnqConId nx t <+> text "where"
+        $$ nest 4 (text "parseSchemaType s = do"
+                  $$ nest 4 (text "e <- element [s]"
+                           $$ text "commit $ interior e $ parseSimpleType")
+                  )
+        $$ nest 4 (text "schemaTypeToXML s ("<> ppUnqConId nx t <+> text "x) = "
+                  $$ nest 4 (text "toXMLElement s [] [toXMLText (simpleTypeText x)]")
+                  )
+    $$ text "instance SimpleType" <+> ppUnqConId nx t <+> text "where"
+        $$ nest 4 (text "acceptingParser = fmap" <+> ppUnqConId nx t
+                                                 <+> text "acceptingParser"
+                   $$ text "simpleTypeText (" <> ppUnqConId nx t
+                                          <+> text "x) = simpleTypeText x")
+    $$ text "-- Placeholder for an XSD list type; item type"
+       <+> ppConId nx item <+> text "is not yet enforced."
 
 ppHighLevelDecl nx (EnumSimpleType t [] comm) =
     ppComment Before comm
@@ -333,7 +403,7 @@ ppHighLevelDecl nx (EnumSimpleType t [] comm) =
 ppHighLevelDecl nx (EnumSimpleType t is comm) =
     ppComment Before comm
     $$ text "data" <+> ppUnqConId nx t
-        $$ nest 4 ( ppvList "=" "|" "deriving (Eq,Show,Enum)" item is )
+        $$ nest 4 ( ppvList "=" "|" "deriving (Eq,Show,Enum)" item enumItems )
     $$ text "instance SchemaType" <+> ppUnqConId nx t <+> text "where"
         $$ nest 4 (text "parseSchemaType s = do"
                   $$ nest 4 (text "e <- element [s]"
@@ -344,21 +414,37 @@ ppHighLevelDecl nx (EnumSimpleType t is comm) =
                   )
     $$ text "instance SimpleType" <+> ppUnqConId nx t <+> text "where"
         $$ nest 4 (text "acceptingParser ="
-                        <+> ppvList "" "`onFail`" "" parseItem is
-                   $$ vcat (map enumText is))
+                        <+> ppvList "" "`onFail`" "" parseItem enumItems
+                   $$ vcat (map enumText enumItems))
   where
-    item (i,c) = (ppUnqConId nx t <> text "_" <> ppConId nx i)
+    enumItems = disambiguateEnumConstructors nx t is
+
+    item (con,_,c) = con
                  $$ ppComment After c
-    parseItem (i,_) = text "do literal \"" <> ppXName i <> text "\"; return"
-                           <+> (ppUnqConId nx t <> text "_" <> ppConId nx i)
-    enumText  (i,_) = text "simpleTypeText"
-                           <+> (ppUnqConId nx t <> text "_" <> ppConId nx i)
+    parseItem (con,i,_) = text "do literal \"" <> ppXName i <> text "\"; return"
+                           <+> con
+    enumText  (con,i,_) = text "simpleTypeText"
+                           <+> con
                            <+> text "= \"" <> ppXName i <> text "\""
+
+    disambiguateEnumConstructors nx' t' items =
+      let bases = [ ppUnqConId nx' t' <> text "_" <> ppUnqConId nx' i
+                  | (i,_) <- items ]
+          keys  = map render bases
+      in zipWith (enumItem keys) [1..] (zip bases items)
+
+    enumItem keys n (base,(i,c)) =
+      let key       = render base
+          duplicate = length (filter (== key) keys) > 1
+          ordinal   = length (filter (== key) (take n keys))
+          con       | duplicate = base <> text "_V" <> int ordinal
+                    | otherwise = base
+      in (con,i,c)
 
 ppHighLevelDecl nx (ElementsAttrs t es as comm) =
     ppComment Before comm
     $$ text "data" <+> ppUnqConId nx t <+> text "=" <+> ppUnqConId nx t
-        $$ nest 8 (ppFields nx t (uniqueify es) as
+        $$ nest 8 (ppFields nx t es' as
                   $$ text "deriving (Eq,Show)")
     $$ text "instance SchemaType" <+> ppUnqConId nx t <+> text "where"
         $$ nest 4 (text "parseSchemaType s = do"
@@ -375,8 +461,10 @@ ppHighLevelDecl nx (ElementsAttrs t es as comm) =
         $$ nest 4 (text "schemaTypeToXML s x@"<> ppUnqConId nx t <> text "{} ="
                   $$ nest 4 (text "toXMLElement s"
                              <+> ppvList "[" "," "]"
-                                         (\a-> toXmlAttr a <+> text "$"
-                                               <+> ppFieldId nx t (attr_name a)
+                                         (\a-> toXmlAttr a
+                                               <+> text "$"
+                                               <+> ppAttrFieldName nx t
+                                                                     collisions a
                                                <+> text "x")
                                          as
                              $$ nest 4 (ppvList "[" "," "]"
@@ -388,6 +476,8 @@ ppHighLevelDecl nx (ElementsAttrs t es as comm) =
                             )
                   )
   where
+    es' = uniqueify es
+    collisions = attrElementCollisions nx t es' as
     returnValue [] = ppUnqConId nx t
     returnValue as = parens (ppUnqConId nx t <+>
                              hsep [text ("a"++show n) | n <- [0..length as-1]])
@@ -588,10 +678,17 @@ ppHighLevelDecl nx (ExtendComplexTypeAbstract t s insts
 ppHighLevelDecl nx (XSDInclude m comm) =
     ppComment After comm
     $$ text "import" <+> ppModId nx m
+ppHighLevelDecl nx (XSDIncludeSource m comm) =
+    ppComment After comm
+    $$ text "import {-# SOURCE #-}" <+> ppModId nx m
 
 ppHighLevelDecl nx (XSDImport m ma comm) =
     ppComment After comm
-    $$ text "import" <+> ppModId nx m
+    $$ text "import qualified" <+> ppModId nx m
+                     <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
+ppHighLevelDecl nx (XSDImportSource m ma comm) =
+    ppComment After comm
+    $$ text "import {-# SOURCE #-} qualified" <+> ppModId nx m
                      <+> maybe empty (\a->text "as"<+>ppConId nx a) ma
 
 ppHighLevelDecl nx (XSDComment comm) =
@@ -739,8 +836,9 @@ ppFields :: NameConverter -> XName -> [Element] -> [Attribute] -> Doc
 ppFields nx t es as | null es && null as = empty
 ppFields nx t es as =  ppvList "{" "," "}" id fields
   where
-    fields = map (ppFieldAttribute nx t) as ++
+    fields = map (ppFieldAttribute nx t collisions) as ++
              zipWith (ppFieldElement nx t) es [0..]
+    collisions = attrElementCollisions nx t es as
 
 -- | Generate a single named field (including type sig) from an element.
 ppFieldElement :: NameConverter -> XName -> Element -> Int -> Doc
@@ -785,12 +883,40 @@ ppElemTypeName nx brack e@Text{} =
     text "String"
 
 -- | Generate a single named field from an attribute.
-ppFieldAttribute :: NameConverter -> XName -> Attribute -> Doc
-ppFieldAttribute nx t a = ppFieldId nx t (attr_name a) <+> text "::"
-                                   <+> (if attr_required a then empty
-                                           else text "Maybe")
-                                   <+> ppConId nx (attr_type a)
-                          $$ ppComment After (attr_comment a)
+ppFieldAttribute :: NameConverter -> XName -> [String] -> Attribute -> Doc
+ppFieldAttribute nx t collisions a =
+    ppAttrFieldName nx t collisions a <+> text "::"
+    <+> (if attr_required a then empty else text "Maybe")
+    <+> ppConId nx (attr_type a)
+    $$ ppComment After (attr_comment a)
+
+ppAttrFieldName :: NameConverter -> XName -> [String] -> Attribute -> Doc
+ppAttrFieldName nx t collisions a =
+    text $ attrFieldName nx t collisions a
+
+attrElementCollisions :: NameConverter -> XName -> [Element] -> [Attribute]
+                      -> [String]
+attrElementCollisions nx t es as =
+    [ attrFieldName nx t [] a
+    | a <- as
+    , attrFieldName nx t [] a `elem`
+      zipWith (elementFieldName nx t) es [0..]
+    ]
+
+attrFieldName :: NameConverter -> XName -> [String] -> Attribute -> String
+attrFieldName nx t collisions a =
+    let name = fieldNameString nx t (attr_name a)
+    in if name `elem` collisions then name++"Attr" else name
+
+elementFieldName :: NameConverter -> XName -> Element -> Int -> String
+elementFieldName nx t e@Element{} _ = fieldNameString nx t (elem_name e)
+elementFieldName nx t e@OneOf{}   i = fieldNameString nx t (XName $ N $ "choice"++show i)
+elementFieldName nx t e@AnyElem{} i = fieldNameString nx t (XName $ N $ "any"++show i)
+elementFieldName nx t e@Text{}    i = fieldNameString nx t (XName $ N $ "text"++show i)
+
+fieldNameString :: NameConverter -> XName -> XName -> String
+fieldNameString nx t f = h
+  where HName h = fieldid nx t f
 
 -- | Generate a list or maybe type name (possibly parenthesised).
 ppTypeModifier :: Modifier -> (Doc->Doc) -> Doc -> Doc

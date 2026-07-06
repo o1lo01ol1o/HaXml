@@ -41,6 +41,10 @@ data Decl
                  -- becomes data T = Ta S0 | Tb S1 | Tc S2 | ...
                | UnionSimpleTypes    XName [XName] Comment
 
+                 -- becomes newtype T = T XsdString
+                 --       (with item parsing/restrictions left unenforced)
+               | ListSimpleType      XName XName Comment
+
                  -- becomes data T = T_C0 | T_C1 | T_C2 | ...
                | EnumSimpleType      XName [(XName,Comment)] Comment
 
@@ -129,8 +133,10 @@ data Decl
 
                  -- becomes an import and re-export
                | XSDInclude XName Comment
+               | XSDIncludeSource XName Comment
                  -- becomes an import only
                | XSDImport  XName (Maybe XName) Comment
+               | XSDImportSource XName (Maybe XName) Comment
                  -- a top-level annotation
                | XSDComment Comment
                  deriving (Eq,Show)
@@ -185,10 +191,12 @@ mkModule name schema decls =
                              }
     where (reexports,other)   = partition xsdinclude decls
           (imports,  theRest) = partition xsdimport  other
-          xsdinclude (XSDInclude _ _)  = True
-          xsdinclude _                 = False
-          xsdimport  (XSDImport _ _ _) = True
-          xsdimport  _                 = False
+          xsdinclude (XSDInclude _ _)       = True
+          xsdinclude (XSDIncludeSource _ _) = True
+          xsdinclude _                      = False
+          xsdimport  (XSDImport _ _ _)      = True
+          xsdimport  (XSDImportSource _ _ _)= True
+          xsdimport  _                      = False
           xsdQualification nss = XName . N . nsPrefix <$>
                                       lookupBy ((==xsd).nsURI) nss
               where xsd = "http://www.w3.org/2001/XMLSchema"
